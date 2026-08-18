@@ -42,19 +42,13 @@ func header(width int) string {
 	)
 }
 
+// repoURL is the GitHub repository shown on the welcome screen.
+const repoURL = "https://github.com/Anseltsmm/opencode"
+
+// lspsConfigured returns a styled list of configured LSP servers, or an empty
+// string when none are configured (so empty sections don't clutter the UI).
 func lspsConfigured(width int) string {
 	cfg := config.Get()
-	title := "LSP Configuration"
-	title = ansi.Truncate(title, width, "…")
-
-	t := theme.CurrentTheme()
-	baseStyle := styles.BaseStyle()
-
-	lsps := baseStyle.
-		Width(width).
-		Foreground(t.Primary()).
-		Bold(true).
-		Render(title)
 
 	// Get LSP names and sort them for consistent ordering
 	var lspNames []string
@@ -62,6 +56,21 @@ func lspsConfigured(width int) string {
 		lspNames = append(lspNames, name)
 	}
 	sort.Strings(lspNames)
+
+	// Nothing to show when no LSPs are configured
+	if len(lspNames) == 0 {
+		return ""
+	}
+
+	t := theme.CurrentTheme()
+	baseStyle := styles.BaseStyle()
+	title := ansi.Truncate("LSP Configuration", width, "…")
+
+	lsps := baseStyle.
+		Width(width).
+		Foreground(t.Primary()).
+		Bold(true).
+		Render(title)
 
 	var lspViews []string
 	for _, name := range lspNames {
@@ -113,8 +122,13 @@ func logo(width int) string {
 		Foreground(t.TextMuted()).
 		Render(version.Version)
 
-	return baseStyle.
+	// Brand the logo with the primary color so it stands out on the
+	// welcome screen instead of blending in with the regular text.
+	logoStyle := baseStyle.
 		Bold(true).
+		Foreground(t.Primary())
+
+	return logoStyle.
 		Width(width).
 		Render(
 			lipgloss.JoinHorizontal(
@@ -127,13 +141,12 @@ func logo(width int) string {
 }
 
 func repo(width int) string {
-	repo := "https://github.com/Anseltsmm/azkia"
 	t := theme.CurrentTheme()
 
 	return styles.BaseStyle().
 		Foreground(t.TextMuted()).
 		Width(width).
-		Render(repo)
+		Render(repoURL)
 }
 
 func cwd(width int) string {

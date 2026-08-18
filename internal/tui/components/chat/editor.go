@@ -258,9 +258,10 @@ func (m *editorCmp) View() string {
 func (m *editorCmp) SetSize(width, height int) tea.Cmd {
 	m.width = width
 	m.height = height
-	m.textarea.SetWidth(width - 3) // account for the prompt and padding right
+	// Account for the ">" prompt, its padding, and the textarea's own prompt
+	// so the input never overflows the right edge of the editor.
+	m.textarea.SetWidth(max(0, width-3))
 	m.textarea.SetHeight(height)
-	m.textarea.SetWidth(width)
 	return nil
 }
 
@@ -317,6 +318,7 @@ func CreateTextArea(existing *textarea.Model) textarea.Model {
 	ta.Prompt = " "
 	ta.ShowLineNumbers = false
 	ta.CharLimit = -1
+	ta.Placeholder = "Ask anything — / for commands, @ to mention files"
 
 	if existing != nil {
 		ta.SetValue(existing.Value())

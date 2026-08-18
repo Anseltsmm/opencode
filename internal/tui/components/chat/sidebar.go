@@ -84,19 +84,17 @@ func (m *sidebarCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *sidebarCmp) View() string {
 	baseStyle := styles.BaseStyle()
 
+	// The sidebar is narrow, so skip the redundant logo/repo header (already
+	// shown in the main chat area) and keep only session + file info.
 	return baseStyle.
 		Width(m.width).
-		PaddingLeft(4).
+		PaddingLeft(2).
 		PaddingRight(2).
 		Height(m.height - 1).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				header(m.width),
-				" ",
 				m.sessionSection(),
-				" ",
-				lspsConfigured(m.width),
 				" ",
 				m.modifiedFiles(),
 			),

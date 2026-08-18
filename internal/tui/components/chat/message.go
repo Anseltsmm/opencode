@@ -58,9 +58,10 @@ func renderMessage(msg string, isUser bool, isFocused bool, width int, info ...s
 		style = style.BorderForeground(t.Secondary())
 	}
 
-	// Apply markdown formatting and handle background color
+	// Apply markdown formatting and handle background color. Wrap at width-3
+	// so the text fits inside the left border without overflowing.
 	parts := []string{
-		styles.ForceReplaceBackgroundWithLipgloss(toMarkdown(msg, isFocused, width), t.Background()),
+		styles.ForceReplaceBackgroundWithLipgloss(toMarkdown(msg, isFocused, width-3), t.Background()),
 	}
 
 	// Remove newline at the end
@@ -452,23 +453,26 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 	}
 
 	resultContent := truncateHeight(response.Content, maxResultHeight)
+	// Wrap at width-1 so content fits inside the tool message's border and
+	// left padding without overflowing the right edge.
+	contentWidth := width - 1
 	switch toolCall.Name {
 	case agent.AgentToolName:
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, false, width),
+			toMarkdown(resultContent, false, contentWidth),
 			t.Background(),
 		)
 	case tools.BashToolName:
 		resultContent = fmt.Sprintf("```bash\n%s\n```", resultContent)
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, true, width),
+			toMarkdown(resultContent, true, contentWidth),
 			t.Background(),
 		)
 	case tools.EditToolName:
 		metadata := tools.EditResponseMetadata{}
 		json.Unmarshal([]byte(response.Metadata), &metadata)
 		truncDiff := truncateHeight(metadata.Diff, maxResultHeight)
-		formattedDiff, _ := diff.FormatDiff(truncDiff, diff.WithTotalWidth(width))
+		formattedDiff, _ := diff.FormatDiff(truncDiff, diff.WithTotalWidth(contentWidth))
 		return formattedDiff
 	case tools.FetchToolName:
 		var params tools.FetchParams
@@ -482,17 +486,17 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", mdFormat, resultContent)
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, true, width),
+			toMarkdown(resultContent, true, contentWidth),
 			t.Background(),
 		)
 	case tools.GlobToolName:
-		return baseStyle.Width(width).Foreground(t.TextMuted()).Render(resultContent)
+		return baseStyle.Width(contentWidth).Foreground(t.TextMuted()).Render(resultContent)
 	case tools.GrepToolName:
-		return baseStyle.Width(width).Foreground(t.TextMuted()).Render(resultContent)
+		return baseStyle.Width(contentWidth).Foreground(t.TextMuted()).Render(resultContent)
 	case tools.LSToolName:
-		return baseStyle.Width(width).Foreground(t.TextMuted()).Render(resultContent)
+		return baseStyle.Width(contentWidth).Foreground(t.TextMuted()).Render(resultContent)
 	case tools.SourcegraphToolName:
-		return baseStyle.Width(width).Foreground(t.TextMuted()).Render(resultContent)
+		return baseStyle.Width(contentWidth).Foreground(t.TextMuted()).Render(resultContent)
 	case tools.ViewToolName:
 		metadata := tools.ViewResponseMetadata{}
 		json.Unmarshal([]byte(response.Metadata), &metadata)
@@ -504,7 +508,7 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", ext, truncateHeight(metadata.Content, maxResultHeight))
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, true, width),
+			toMarkdown(resultContent, true, contentWidth),
 			t.Background(),
 		)
 	case tools.WriteToolName:
@@ -520,13 +524,13 @@ func renderToolResponse(toolCall message.ToolCall, response message.ToolResult, 
 		}
 		resultContent = fmt.Sprintf("```%s\n%s\n```", ext, truncateHeight(params.Content, maxResultHeight))
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, true, width),
+			toMarkdown(resultContent, true, contentWidth),
 			t.Background(),
 		)
 	default:
 		resultContent = fmt.Sprintf("```text\n%s\n```", resultContent)
 		return styles.ForceReplaceBackgroundWithLipgloss(
-			toMarkdown(resultContent, true, width),
+			toMarkdown(resultContent, true, contentWidth),
 			t.Background(),
 		)
 	}

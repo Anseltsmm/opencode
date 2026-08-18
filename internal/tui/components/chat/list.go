@@ -278,20 +278,12 @@ func (m *messagesCmp) View() string {
 			)
 	}
 	if len(m.messages) == 0 {
-		content := baseStyle.
-			Width(m.width).
-			Height(m.height - 1).
-			Render(
-				m.initialScreen(),
-			)
-
 		return baseStyle.
 			Width(m.width).
 			Render(
 				lipgloss.JoinVertical(
 					lipgloss.Top,
-					content,
-					"",
+					m.initialScreen(),
 					m.help(),
 				),
 			)
@@ -382,17 +374,16 @@ func (m *messagesCmp) help() string {
 			lipgloss.Left,
 			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("press "),
 			baseStyle.Foreground(t.Text()).Bold(true).Render("esc"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" to exit cancel"),
+			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" to cancel"),
 		)
 	} else {
 		text += lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("press "),
-			baseStyle.Foreground(t.Text()).Bold(true).Render("enter"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" to send the message,"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" write"),
-			baseStyle.Foreground(t.Text()).Bold(true).Render(" \\"),
-			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" and enter to add a new line"),
+			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("enter "),
+			baseStyle.Foreground(t.Text()).Bold(true).Render("to send"),
+			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" · type "),
+			baseStyle.Foreground(t.Text()).Bold(true).Render(`\`),
+			baseStyle.Foreground(t.TextMuted()).Bold(true).Render(" + enter for a new line"),
 		)
 	}
 	return baseStyle.
@@ -401,14 +392,39 @@ func (m *messagesCmp) help() string {
 }
 
 func (m *messagesCmp) initialScreen() string {
+	t := theme.CurrentTheme()
 	baseStyle := styles.BaseStyle()
+
+	h := header(m.width)
+	title := baseStyle.
+		Bold(true).
+		Foreground(t.Primary()).
+		Render("What do you want to build?")
+	subtitle := baseStyle.
+		Foreground(t.TextMuted()).
+		Render("Ask anything, type / for commands, or @ to mention files")
+	welcome := lipgloss.JoinVertical(lipgloss.Center, title, subtitle)
+
+	// Center the welcome message in the space below the header so the
+	// empty screen doesn't look like a broken/blank page.
+	centerHeight := m.height - lipgloss.Height(h) - 2
+	if centerHeight < 1 {
+		centerHeight = 1
+	}
+	welcomeBlock := lipgloss.Place(
+		m.width,
+		centerHeight,
+		lipgloss.Center,
+		lipgloss.Center,
+		welcome,
+		lipgloss.WithWhitespaceBackground(t.Background()),
+	)
 
 	return baseStyle.Width(m.width).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
-			header(m.width),
-			"",
-			lspsConfigured(m.width),
+			h,
+			welcomeBlock,
 		),
 	)
 }
