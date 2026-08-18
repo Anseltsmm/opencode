@@ -383,7 +383,9 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case showModelDialogMsg:
 		a.showModelDialog = true
 		// Refresh so the model list is up to date (fetches custom provider models)
-		a.modelDialog.Refresh()
+		if err := a.modelDialog.Refresh(); err != nil {
+			return a, util.ReportWarn(err.Error())
+		}
 		return a, nil
 
 	case showHelpDialogMsg:
@@ -582,7 +584,9 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions && !a.showSessionDialog && !a.showCommandDialog {
 				a.showModelDialog = true
 				// Refresh so the model list is up to date (fetches custom provider models)
-				a.modelDialog.Refresh()
+				if err := a.modelDialog.Refresh(); err != nil {
+					return a, util.ReportWarn(err.Error())
+				}
 				return a, nil
 			}
 			return a, nil

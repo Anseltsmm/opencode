@@ -34,7 +34,7 @@ type CloseModelDialogMsg struct{}
 type ModelDialog interface {
 	tea.Model
 	layout.Bindings
-	Refresh()
+	Refresh() error
 }
 
 type modelDialogCmp struct {
@@ -374,20 +374,26 @@ func getModelsForProvider(provider models.ModelProvider) []models.Model {
 }
 
 // Refresh reloads the dialog and fetches model lists from OpenAI-compatible
-// endpoints so custom provider models show up in the picker.
-func (m *modelDialogCmp) Refresh() {
+// endpoints so custom provider models show up in the picker. It returns an
+// error when the endpoint can't be reached so the user sees why no custom
+// models are listed.
+func (m *modelDialogCmp) Refresh() error {
 	cfg := config.Get()
 
 	// Register models available on the custom OpenAI-compatible endpoint and
 	// cache them in the config so they survive restarts
 	if pc := cfg.Providers[models.ProviderOpenAI]; pc.BaseURL != "" {
-		if ids, err := provider.FetchModels(pc.BaseURL, pc.APIKey); err == nil {
-			models.RegisterDynamicModels(ids, models.ProviderOpenAI)
-			_ = config.SetProvider(models.ProviderOpenAI, pc.APIKey, pc.BaseURL, ids)
+		ids, err := provider.FetchModels(pc.BaseURL, pc.APIKey)
+		if err != nil {
+			m.setupModels()
+			return fmt.Errorf("gagal memuat model dari %s: %w", strings.TrimSuffix(pc.BaseURL, "/"), err)
 		}
+		models.RegisterDynamicModels(ids, models.ProviderOpenAI)
+		_ = config.SetProvider(models.ProviderOpenAI, pc.APIKey, pc.BaseURL, ids)
 	}
 
 	m.setupModels()
+	return nil
 }
 
 func NewModelDialogCmp() ModelDialog {
