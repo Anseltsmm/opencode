@@ -181,6 +181,16 @@ func (a appModel) Init() tea.Cmd {
 		return dialog.ShowInitDialogMsg{Show: shouldShow}
 	})
 
+	// If no LLM provider is configured yet, prompt the user to set one up
+	// right away instead of failing or erroring on the first message
+	if a.app.NeedsProviderSetup {
+		cmds = append(cmds, util.CmdHandler(dialog.ShowMultiArgumentsDialogMsg{
+			CommandID: "provider",
+			Content:   "",
+			ArgNames:  []string{"BASEURL", "APIKEY"},
+		}))
+	}
+
 	return tea.Batch(cmds...)
 }
 
@@ -458,7 +468,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Close multi-arguments dialog
 		a.showMultiArgumentsDialog = false
 
-		// OpenAI-compatible provider setup (/provider command)
+		// OpenAI-compatible provider setup (/provider command or startup prompt)
 		if msg.CommandID == "provider" && msg.Submit {
 			baseURL := msg.Args["BASEURL"]
 			apiKey := msg.Args["APIKEY"]
@@ -470,6 +480,19 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := config.SetProvider(models.ProviderOpenAI, apiKey, baseURL, nil); err != nil {
 				return a, util.ReportError(err)
 			}
+
+			// Make sure the coder agent has a model selected before reloading
+			if config.Get().Agents[config.AgentCoder].Model == "" {
+				if err := config.UpdateAgentModel(config.AgentCoder, models.GPT41); err != nil {
+					return a, util.ReportError(err)
+				}
+			}
+
+			// Apply the new provider to the running agent
+			if err := a.app.CoderAgent.ReloadProvider(); err != nil {
+				return a, util.ReportError(err)
+			}
+			a.app.NeedsProviderSetup = false
 
 			return a, util.ReportInfo("Provider OpenAI-compatible disimpan — pilih model via /models")
 		}

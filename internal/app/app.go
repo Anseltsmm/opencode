@@ -30,6 +30,10 @@ type App struct {
 
 	CoderAgent agent.Service
 
+	// NeedsProviderSetup is true when the app started without a configured
+	// LLM provider, so the TUI should prompt the user to set one up.
+	NeedsProviderSetup bool
+
 	LSPClients map[string]*lsp.Client
 
 	clientsMutex sync.RWMutex
@@ -76,6 +80,8 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 		logging.Error("Failed to create coder agent", err)
 		return nil, err
 	}
+
+	app.NeedsProviderSetup = !app.CoderAgent.ProviderConfigured()
 
 	return app, nil
 }

@@ -644,7 +644,9 @@ func Validate() error {
 
 	// Validate providers
 	for provider, providerCfg := range cfg.Providers {
-		if providerCfg.APIKey == "" && !providerCfg.Disabled {
+		// Providers with a custom base URL (e.g. a local OpenAI-compatible
+		// endpoint) may legitimately not require an API key
+		if providerCfg.APIKey == "" && providerCfg.BaseURL == "" && !providerCfg.Disabled {
 			fmt.Printf("provider has no API key, marking as disabled %s", provider)
 			logging.Warn("provider has no API key, marking as disabled", "provider", provider)
 			providerCfg.Disabled = true

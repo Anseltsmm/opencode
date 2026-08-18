@@ -54,6 +54,8 @@ type Service interface {
 	IsBusy() bool
 	Update(agentName config.AgentName, modelID models.ModelID) (models.Model, error)
 	Summarize(ctx context.Context, sessionID string) error
+	ReloadProvider() error
+	ProviderConfigured() bool
 }
 
 type agent struct {
@@ -67,7 +69,8 @@ type agent struct {
 	titleProvider     provider.Provider
 	summarizeProvider provider.Provider
 
-	activeRequests sync.Map
+	providerConfigured bool
+	activeRequests     sync.Map
 }
 
 func NewAgent(
@@ -77,22 +80,30 @@ func NewAgent(
 	agentTools []tools.BaseTool,
 ) (Service, error) {
 	agentProvider, err := createAgentProvider(agentName)
-	if err != nil {
+	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
 		return nil, err
 	}
-	var titleProvider provider.Provider
-	// Only generate titles for the coder agent
-	if agentName == config.AgentCoder {
-		titleProvider, err = createAgentProvider(config.AgentTitle)
-		if err != nil {
-			return nil, err
-		}
+	if errors.Is(err, provider.ErrNoProviderConfigured) {
+		agentProvider = provider.NewNoopProvider()
 	}
+
+	var titleProvider provider.Provider
 	var summarizeProvider provider.Provider
 	if agentName == config.AgentCoder {
-		summarizeProvider, err = createAgentProvider(config.AgentSummarizer)
-		if err != nil {
+		// Only generate titles/summaries for the coder agent
+		titleProvider, err = createAgentProvider(config.AgentTitle)
+		if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
 			return nil, err
+		}
+		if errors.Is(err, provider.ErrNoProviderConfigured) {
+			titleProvider = provider.NewNoopProvider()
+		}
+		summarizeProvider, err = createAgentProvider(config.AgentSummarizer)
+		if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
+			return nil, err
+		}
+		if errors.Is(err, provider.ErrNoProviderConfigured) {
+			summarizeProvider = provider.NewNoopProvider()
 		}
 	}
 
@@ -104,6 +115,7 @@ func NewAgent(
 		tools:             agentTools,
 		titleProvider:     titleProvider,
 		summarizeProvider: summarizeProvider,
+		providerConfigured: err == nil,
 		activeRequests:    sync.Map{},
 	}
 
@@ -513,6 +525,45 @@ func (a *agent) TrackUsage(ctx context.Context, sessionID string, model models.M
 	return nil
 }
 
+// ReloadProvider re-creates the coder/title/summarize providers from the
+// current config. Called after the user sets up a provider via /provider.
+func (a *agent) ReloadProvider() error {
+	if a.IsBusy() {
+		return fmt.Errorf("cannot reload provider while processing requests")
+	}
+
+	coderProvider, err := createAgentProvider(config.AgentCoder)
+	if err != nil {
+		return fmt.Errorf("failed to create coder provider: %w", err)
+	}
+	titleProvider, err := createAgentProvider(config.AgentTitle)
+	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
+		return fmt.Errorf("failed to create title provider: %w", err)
+	}
+	if errors.Is(err, provider.ErrNoProviderConfigured) {
+		titleProvider = provider.NewNoopProvider()
+	}
+	summarizeProvider, err := createAgentProvider(config.AgentSummarizer)
+	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
+		return fmt.Errorf("failed to create summarize provider: %w", err)
+	}
+	if errors.Is(err, provider.ErrNoProviderConfigured) {
+		summarizeProvider = provider.NewNoopProvider()
+	}
+
+	a.provider = coderProvider
+	a.titleProvider = titleProvider
+	a.summarizeProvider = summarizeProvider
+	a.providerConfigured = true
+	return nil
+}
+
+// ProviderConfigured reports whether a real provider is in use (as opposed to
+// the noop placeholder used before the user sets one up).
+func (a *agent) ProviderConfigured() bool {
+	return a.providerConfigured
+}
+
 func (a *agent) Update(agentName config.AgentName, modelID models.ModelID) (models.Model, error) {
 	if a.IsBusy() {
 		return models.Model{}, fmt.Errorf("cannot change model while processing requests")
@@ -707,7 +758,10 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 	cfg := config.Get()
 	agentConfig, ok := cfg.Agents[agentName]
 	if !ok {
-		return nil, fmt.Errorf("agent %s not found", agentName)
+		return nil, provider.ErrNoProviderConfigured
+	}
+	if agentConfig.Model == "" {
+		return nil, provider.ErrNoProviderConfigured
 	}
 	model, ok := models.GetModel(agentConfig.Model)
 	if !ok {
@@ -716,7 +770,7 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 
 	providerCfg, ok := cfg.Providers[model.Provider]
 	if !ok {
-		return nil, fmt.Errorf("provider %s not supported", model.Provider)
+		return nil, provider.ErrNoProviderConfigured
 	}
 	if providerCfg.Disabled {
 		return nil, fmt.Errorf("provider %s is not enabled", model.Provider)
