@@ -27,12 +27,14 @@ type chatPage struct {
 	session              session.Session
 	completionDialog     dialog.CompletionDialog
 	showCompletionDialog bool
+	showSidebar          bool
 }
 
 type ChatKeyMap struct {
 	ShowCompletionDialog key.Binding
 	NewSession           key.Binding
 	Cancel               key.Binding
+	ToggleSidebar        key.Binding
 }
 
 var keyMap = ChatKeyMap{
@@ -47,6 +49,10 @@ var keyMap = ChatKeyMap{
 	Cancel: key.NewBinding(
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "cancel"),
+	),
+	ToggleSidebar: key.NewBinding(
+		key.WithKeys("ctrl+b"),
+		key.WithHelp("ctrl+b", "toggle sidebar"),
 	),
 }
 
@@ -74,6 +80,7 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chat.NewSessionMsg:
 		// Start a new session (same as ctrl+n)
 		p.session = session.Session{}
+		p.showSidebar = false
 		return p, tea.Batch(
 			p.clearSidebar(),
 			util.CmdHandler(chat.SessionClearedMsg{}),
@@ -100,12 +107,6 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p, cmd
 		}
 	case chat.SessionSelectedMsg:
-		if p.session.ID == "" {
-			cmd := p.setSidebar()
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-		}
 		p.session = msg
 	case tea.KeyMsg:
 		switch {
@@ -114,10 +115,24 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Continue sending keys to layout->chat
 		case key.Matches(msg, keyMap.NewSession):
 			p.session = session.Session{}
+			p.showSidebar = false
 			return p, tea.Batch(
 				p.clearSidebar(),
 				util.CmdHandler(chat.SessionClearedMsg{}),
 			)
+		case key.Matches(msg, keyMap.ToggleSidebar):
+			// Toggle the sidebar instead of popping it in automatically, so the
+			// chat area doesn't suddenly narrow when a session starts.
+			p.showSidebar = !p.showSidebar
+			if p.showSidebar {
+				cmd := p.setSidebar()
+				if cmd != nil {
+					return p, cmd
+				}
+			} else {
+				return p, p.clearSidebar()
+			}
+			return p, nil
 		case key.Matches(msg, keyMap.Cancel):
 			if p.session.ID != "" {
 				// Cancel the current session's generation process
@@ -168,10 +183,6 @@ func (p *chatPage) sendMessage(text string, attachments []message.Attachment) te
 		}
 
 		p.session = session
-		cmd := p.setSidebar()
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
 		cmds = append(cmds, util.CmdHandler(chat.SessionSelectedMsg(session)))
 	}
 

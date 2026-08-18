@@ -160,10 +160,14 @@ func (m statusCmp) View() string {
 		}
 
 		infoWidth := availableWidth - 10
-		// Truncate message if it's longer than available width
+		// Truncate message if it's longer than available width. Keep the tail
+		// of the message (where connection errors and HTTP status codes usually
+		// appear) instead of only the prefix, which is often less useful.
 		msg := m.info.Msg
 		if len(msg) > infoWidth && infoWidth > 0 {
-			msg = msg[:infoWidth] + "..."
+			half := infoWidth / 2
+			tailLen := infoWidth - half - 1
+			msg = msg[:half] + "…" + msg[len(msg)-tailLen:]
 		}
 		status += infoStyle.Render(msg)
 	} else {

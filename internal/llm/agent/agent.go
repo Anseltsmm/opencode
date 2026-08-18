@@ -245,11 +245,14 @@ func (a *agent) processGeneration(ctx context.Context, sessionID, content string
 	if len(msgs) == 0 {
 		go func() {
 			defer logging.RecoverPanic("agent.Run", func() {
-				logging.ErrorPersist("panic while generating title")
+				logging.Error("panic while generating title")
 			})
+			// Title generation is best-effort: its failure is not something the
+			// user needs to act on, so log it to the log page but don't surface
+			// it in the status bar (it would hide the real chat error).
 			titleErr := a.generateTitle(context.Background(), sessionID, content)
 			if titleErr != nil {
-				logging.ErrorPersist(fmt.Sprintf("failed to generate title: %v", titleErr))
+				logging.Error("failed to generate title", "error", titleErr)
 			}
 		}()
 	}

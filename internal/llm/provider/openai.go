@@ -282,6 +282,17 @@ func (o *openaiClient) stream(ctx context.Context, messages []message.Message, t
 
 			err := openaiStream.Err()
 			if err == nil || errors.Is(err, io.EOF) {
+				// Some OpenAI-compatible servers/proxies return a non-SSE body
+				// even for streaming requests. Guard against an empty accumulator
+				// so we surface a clean error instead of panicking.
+				if len(acc.ChatCompletion.Choices) == 0 {
+					eventChan <- ProviderEvent{
+						Type:  EventError,
+						Error: fmt.Errorf("empty response from provider (expected a streaming response with choices)"),
+					}
+					close(eventChan)
+					return
+				}
 				// Stream completed successfully
 				finishReason := o.finishReason(string(acc.ChatCompletion.Choices[0].FinishReason))
 				if len(acc.ChatCompletion.Choices[0].Message.ToolCalls) > 0 {
