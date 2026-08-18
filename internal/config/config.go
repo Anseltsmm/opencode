@@ -52,8 +52,10 @@ type Agent struct {
 
 // Provider defines configuration for an LLM provider.
 type Provider struct {
-	APIKey   string `json:"apiKey"`
-	Disabled bool   `json:"disabled"`
+	APIKey   string   `json:"apiKey"`
+	BaseURL  string   `json:"baseURL,omitempty"`
+	Models   []string `json:"models,omitempty"`
+	Disabled bool     `json:"disabled"`
 }
 
 // Data defines storage configuration.
@@ -156,6 +158,15 @@ func Load(workingDir string, debug bool) (*Config, error) {
 	}
 
 	applyDefaultValues()
+
+	// Register models cached from custom OpenAI-compatible providers so
+	// validation accepts them even before the /models dialog fetches again
+	for providerName, pc := range cfg.Providers {
+		if len(pc.Models) > 0 {
+			models.RegisterDynamicModels(pc.Models, providerName)
+		}
+	}
+
 	defaultLevel := slog.LevelInfo
 	if cfg.Debug {
 		defaultLevel = slog.LevelDebug
@@ -219,9 +230,16 @@ func Load(workingDir string, debug bool) (*Config, error) {
 func configureViper() {
 	viper.SetConfigName(fmt.Sprintf(".%s", appName))
 	viper.SetConfigType("json")
-	viper.AddConfigPath("$HOME")
-	viper.AddConfigPath(fmt.Sprintf("$XDG_CONFIG_HOME/%s", appName))
-	viper.AddConfigPath(fmt.Sprintf("$HOME/.config/%s", appName))
+
+	// Expand $HOME / $XDG_CONFIG_HOME so the config file is actually found
+	if home, err := os.UserHomeDir(); err == nil {
+		viper.AddConfigPath(home)
+		viper.AddConfigPath(filepath.Join(home, ".config", appName))
+	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		viper.AddConfigPath(filepath.Join(xdg, appName))
+	}
+
 	viper.SetEnvPrefix(strings.ToUpper(appName))
 	viper.AutomaticEnv()
 }
@@ -469,16 +487,22 @@ func applyDefaultValues() {
 			cfg.MCPServers[k] = v
 		}
 	}
-}
-
-// It validates model IDs and providers, ensuring they are supported.
+}	// It validates model IDs and providers, ensuring they are supported.
 func validateAgent(cfg *Config, name AgentName, agent Agent) error {
-	// Check if model exists
+	// Check if model exists (built-in or dynamically registered)
 	// TODO:	If a copilot model is specified, but model is not found,
 	// 		 	it might be new model. The https://api.githubcopilot.com/models
 	// 		 	endpoint should be queried to validate if the model is supported.
-	model, modelExists := models.SupportedModels[agent.Model]
+	model, modelExists := models.GetModel(agent.Model)
 	if !modelExists {
+		// Custom OpenAI-compatible endpoint: any model ID may be available
+		// there, so accept it instead of reverting. This also lets the TUI
+		// start so the user can refresh the model list via /models.
+		if pc, ok := cfg.Providers[models.ProviderOpenAI]; ok && pc.BaseURL != "" {
+			models.RegisterDynamicModel(agent.Model, string(agent.Model), models.ProviderOpenAI)
+			return nil
+		}
+
 		logging.Warn("unsupported model configured, reverting to default",
 			"agent", name,
 			"configured_model", agent.Model)
@@ -883,7 +907,7 @@ func UpdateAgentModel(agentName AgentName, modelID models.ModelID) error {
 
 	existingAgentCfg := cfg.Agents[agentName]
 
-	model, ok := models.SupportedModels[modelID]
+	model, ok := models.GetModel(modelID)
 	if !ok {
 		return fmt.Errorf("model %s not supported", modelID)
 	}
@@ -926,6 +950,34 @@ func UpdateTheme(themeName string) error {
 	// Update the file config
 	return updateCfgFile(func(config *Config) {
 		config.TUI.Theme = themeName
+	})
+}
+
+// SetProvider updates a provider's API key, base URL and cached model list,
+// persisting to the config file. Used for OpenAI-compatible providers with a
+// custom base URL.
+func SetProvider(providerName models.ModelProvider, apiKey, baseURL string, modelIDs []string) error {
+	if cfg == nil {
+		return fmt.Errorf("config not loaded")
+	}
+
+	// Update the in-memory config
+	providerCfg := cfg.Providers[providerName]
+	providerCfg.APIKey = apiKey
+	providerCfg.BaseURL = baseURL
+	providerCfg.Models = modelIDs
+	cfg.Providers[providerName] = providerCfg
+
+	// Update the file config
+	return updateCfgFile(func(config *Config) {
+		if config.Providers == nil {
+			config.Providers = make(map[models.ModelProvider]Provider)
+		}
+		pc := config.Providers[providerName]
+		pc.APIKey = apiKey
+		pc.BaseURL = baseURL
+		pc.Models = modelIDs
+		config.Providers[providerName] = pc
 	})
 }
 

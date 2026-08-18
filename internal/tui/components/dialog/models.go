@@ -7,6 +7,7 @@ import (
 
 	"github.com/Anseltsmm/azkia/internal/config"
 	"github.com/Anseltsmm/azkia/internal/llm/models"
+	"github.com/Anseltsmm/azkia/internal/llm/provider"
 	"github.com/Anseltsmm/azkia/internal/tui/layout"
 	"github.com/Anseltsmm/azkia/internal/tui/styles"
 	"github.com/Anseltsmm/azkia/internal/tui/theme"
@@ -33,6 +34,7 @@ type CloseModelDialogMsg struct{}
 type ModelDialog interface {
 	tea.Model
 	layout.Bindings
+	Refresh()
 }
 
 type modelDialogCmp struct {
@@ -275,16 +277,24 @@ func (m *modelDialogCmp) setupModels() {
 	m.hScrollPossible = len(m.availableProviders) > 1
 
 	m.provider = modelInfo.Provider
+	// Fall back to the first enabled provider if the current model is unknown
+	if m.provider == "" && len(m.availableProviders) > 0 {
+		m.provider = m.availableProviders[0]
+	}
 	m.hScrollOffset = findProviderIndex(m.availableProviders, m.provider)
+	if m.hScrollOffset < 0 {
+		m.hScrollOffset = 0
+	}
 
 	m.setupModelsForProvider(m.provider)
 }
 
 func GetSelectedModel(cfg *config.Config) models.Model {
-
 	agentCfg := cfg.Agents[config.AgentCoder]
-	selectedModelId := agentCfg.Model
-	return models.SupportedModels[selectedModelId]
+	if m, ok := models.GetModel(agentCfg.Model); ok {
+		return m
+	}
+	return models.Model{}
 }
 
 func getEnabledProviders(cfg *config.Config) []models.ModelProvider {
@@ -333,7 +343,7 @@ func (m *modelDialogCmp) setupModelsForProvider(provider models.ModelProvider) {
 	m.scrollOffset = 0
 
 	// Try to select the current model if it belongs to this provider
-	if provider == models.SupportedModels[selectedModelId].Provider {
+	if selectedModel, ok := models.GetModel(selectedModelId); ok && selectedModel.Provider == provider {
 		for i, model := range m.models {
 			if model.ID == selectedModelId {
 				m.selectedIdx = i
@@ -348,12 +358,7 @@ func (m *modelDialogCmp) setupModelsForProvider(provider models.ModelProvider) {
 }
 
 func getModelsForProvider(provider models.ModelProvider) []models.Model {
-	var providerModels []models.Model
-	for _, model := range models.SupportedModels {
-		if model.Provider == provider {
-			providerModels = append(providerModels, model)
-		}
-	}
+	providerModels := models.ModelsForProvider(provider)
 
 	// reverse alphabetical order (if llm naming was consistent latest would appear first)
 	slices.SortFunc(providerModels, func(a, b models.Model) int {
@@ -366,6 +371,23 @@ func getModelsForProvider(provider models.ModelProvider) []models.Model {
 	})
 
 	return providerModels
+}
+
+// Refresh reloads the dialog and fetches model lists from OpenAI-compatible
+// endpoints so custom provider models show up in the picker.
+func (m *modelDialogCmp) Refresh() {
+	cfg := config.Get()
+
+	// Register models available on the custom OpenAI-compatible endpoint and
+	// cache them in the config so they survive restarts
+	if pc := cfg.Providers[models.ProviderOpenAI]; pc.BaseURL != "" {
+		if ids, err := provider.FetchModels(pc.BaseURL, pc.APIKey); err == nil {
+			models.RegisterDynamicModels(ids, models.ProviderOpenAI)
+			_ = config.SetProvider(models.ProviderOpenAI, pc.APIKey, pc.BaseURL, ids)
+		}
+	}
+
+	m.setupModels()
 }
 
 func NewModelDialogCmp() ModelDialog {

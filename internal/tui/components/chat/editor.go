@@ -162,6 +162,12 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		m.attachments = append(m.attachments, msg.Attachment)
+	case SlashCommandClosedMsg:
+		// Clear the slash command input after the command dialog closes
+		if strings.HasPrefix(m.textarea.Value(), "/") {
+			m.textarea.SetValue("")
+		}
+		return m, nil
 	case tea.KeyMsg:
 		if key.Matches(msg, DeleteKeyMaps.AttachmentDeleteMode) {
 			m.deleteMode = true
@@ -198,9 +204,13 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.deleteMode = false
 			return m, nil
 		}
-		// Hanlde Enter key
+		// Handle Enter key
 		if m.textarea.Focused() && key.Matches(msg, editorMaps.Send) {
 			value := m.textarea.Value()
+			if strings.HasPrefix(value, "/") {
+				// Slash command: open the command dialog instead of sending
+				return m, util.CmdHandler(dialog.OpenCommandDialogMsg{Query: value})
+			}
 			if len(value) > 0 && value[len(value)-1] == '\\' {
 				// If the last character is a backslash, remove it and add a newline
 				m.textarea.SetValue(value[:len(value)-1] + "\n")
@@ -213,6 +223,15 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	}
 	m.textarea, cmd = m.textarea.Update(msg)
+
+	// If the user typed a key that makes the input start with "/", open the
+	// command dialog (slash commands). Only do this for real key presses, so
+	// unrelated messages (e.g. status updates) don't reset the dialog query.
+	if _, ok := msg.(tea.KeyMsg); ok {
+		if strings.HasPrefix(m.textarea.Value(), "/") {
+			cmd = tea.Batch(cmd, util.CmdHandler(dialog.OpenCommandDialogMsg{Query: m.textarea.Value()}))
+		}
+	}
 	return m, cmd
 }
 

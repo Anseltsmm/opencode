@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"strings"
+
 	utilComponents "github.com/Anseltsmm/azkia/internal/tui/components/util"
 	"github.com/Anseltsmm/azkia/internal/tui/layout"
 	"github.com/Anseltsmm/azkia/internal/tui/styles"
@@ -54,17 +56,26 @@ type CommandSelectedMsg struct {
 // CloseCommandDialogMsg is sent when the command dialog is closed
 type CloseCommandDialogMsg struct{}
 
+// OpenCommandDialogMsg is sent to open the command dialog with an initial filter query
+// (used by slash commands, e.g. typing "/new" in the editor)
+type OpenCommandDialogMsg struct {
+	Query string
+}
+
 // CommandDialog interface for the command selection dialog
 type CommandDialog interface {
 	tea.Model
 	layout.Bindings
 	SetCommands(commands []Command)
+	SetQuery(query string)
 }
 
 type commandDialogCmp struct {
-	listView utilComponents.SimpleList[Command]
-	width    int
-	height   int
+	listView    utilComponents.SimpleList[Command]
+	allCommands []Command
+	query       string
+	width       int
+	height      int
 }
 
 type commandKeyMap struct {
@@ -101,6 +112,19 @@ func (c *commandDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, commandKeys.Escape):
 			return c, util.CmdHandler(CloseCommandDialogMsg{})
+		case msg.Type == tea.KeyBackspace:
+			if len(c.query) > 0 {
+				c.query = c.query[:len(c.query)-1]
+				c.applyFilter()
+			}
+			return c, nil
+		default:
+			// Typing filters the command list (slash-command style)
+			if s := msg.String(); len(s) == 1 {
+				c.query += s
+				c.applyFilter()
+				return c, nil
+			}
 		}
 	case tea.WindowSizeMsg:
 		c.width = msg.Width
@@ -112,6 +136,23 @@ func (c *commandDialogCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return c, tea.Batch(cmds...)
+}
+
+// applyFilter filters the commands list by the current query (e.g. "/new")
+func (c *commandDialogCmp) applyFilter() {
+	slug := strings.ToLower(strings.TrimPrefix(c.query, "/"))
+	if slug == "" {
+		c.listView.SetItems(c.allCommands)
+		return
+	}
+
+	filtered := make([]Command, 0)
+	for _, cmd := range c.allCommands {
+		if strings.HasPrefix(strings.ToLower(cmd.ID), slug) {
+			filtered = append(filtered, cmd)
+		}
+	}
+	c.listView.SetItems(filtered)
 }
 
 func (c *commandDialogCmp) View() string {
@@ -142,9 +183,22 @@ func (c *commandDialogCmp) View() string {
 		Padding(0, 1).
 		Render("Commands")
 
+	// Show the current filter query (slash command style)
+	queryText := c.query
+	if !strings.HasPrefix(queryText, "/") {
+		queryText = "/" + queryText
+	}
+	query := baseStyle.
+		Foreground(t.TextMuted()).
+		Width(maxWidth).
+		Padding(0, 1).
+		Render(queryText)
+
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		title,
+		baseStyle.Width(maxWidth).Render(""),
+		query,
 		baseStyle.Width(maxWidth).Render(""),
 		baseStyle.Width(maxWidth).Render(c.listView.View()),
 		baseStyle.Width(maxWidth).Render(""),
@@ -163,7 +217,14 @@ func (c *commandDialogCmp) BindingKeys() []key.Binding {
 }
 
 func (c *commandDialogCmp) SetCommands(commands []Command) {
-	c.listView.SetItems(commands)
+	c.allCommands = commands
+	c.query = ""
+	c.applyFilter()
+}
+
+func (c *commandDialogCmp) SetQuery(query string) {
+	c.query = query
+	c.applyFilter()
 }
 
 // NewCommandDialogCmp creates a new command selection dialog
@@ -172,7 +233,7 @@ func NewCommandDialogCmp() CommandDialog {
 		[]Command{},
 		10,
 		"No commands available",
-		true,
+		false,
 	)
 	return &commandDialogCmp{
 		listView: listView,

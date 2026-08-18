@@ -71,6 +71,13 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cmd != nil {
 			return p, cmd
 		}
+	case chat.NewSessionMsg:
+		// Start a new session (same as ctrl+n)
+		p.session = session.Session{}
+		return p, tea.Batch(
+			p.clearSidebar(),
+			util.CmdHandler(chat.SessionClearedMsg{}),
+		)
 	case dialog.CommandRunCustomMsg:
 		// Check if the agent is busy before executing custom commands
 		if p.app.CoderAgent.IsBusy() {

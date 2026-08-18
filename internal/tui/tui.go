@@ -8,6 +8,7 @@ import (
 	"github.com/Anseltsmm/azkia/internal/app"
 	"github.com/Anseltsmm/azkia/internal/config"
 	"github.com/Anseltsmm/azkia/internal/llm/agent"
+	"github.com/Anseltsmm/azkia/internal/llm/models"
 	"github.com/Anseltsmm/azkia/internal/logging"
 	"github.com/Anseltsmm/azkia/internal/permission"
 	"github.com/Anseltsmm/azkia/internal/pubsub"
@@ -36,6 +37,10 @@ type keyMap struct {
 }
 
 type startCompactSessionMsg struct{}
+
+type showModelDialogMsg struct{}
+
+type showHelpDialogMsg struct{}
 
 const (
 	quitKey = "q"
@@ -299,9 +304,22 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.showSessionDialog = false
 		return a, nil
 
+	case dialog.OpenCommandDialogMsg:
+		// Open the command dialog with a filter query (slash commands)
+		if a.currentPage != page.ChatPage || a.showQuit || a.showPermissions || a.showSessionDialog || a.showThemeDialog || a.showFilepicker {
+			return a, nil
+		}
+		if len(a.commands) == 0 {
+			return a, util.ReportWarn("No commands available")
+		}
+		a.commandDialog.SetCommands(a.commands)
+		a.commandDialog.SetQuery(msg.Query)
+		a.showCommandDialog = true
+		return a, nil
+
 	case dialog.CloseCommandDialogMsg:
 		a.showCommandDialog = false
-		return a, nil
+		return a, util.CmdHandler(chat.SlashCommandClosedMsg{})
 
 	case startCompactSessionMsg:
 		// Start compacting the current session
@@ -351,6 +369,16 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.pages[a.currentPage], cmd = a.pages[a.currentPage].Update(msg)
 		a.showThemeDialog = false
 		return a, tea.Batch(cmd, util.ReportInfo("Theme changed to: "+msg.ThemeName))
+
+	case showModelDialogMsg:
+		a.showModelDialog = true
+		// Refresh so the model list is up to date (fetches custom provider models)
+		a.modelDialog.Refresh()
+		return a, nil
+
+	case showHelpDialogMsg:
+		a.showHelp = true
+		return a, nil
 
 	case dialog.CloseModelDialogMsg:
 		a.showModelDialog = false
@@ -408,11 +436,17 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case dialog.CommandSelectedMsg:
 		a.showCommandDialog = false
-		// Execute the command handler if available
+		// Execute the command handler if available and clear the slash input
 		if msg.Command.Handler != nil {
-			return a, msg.Command.Handler(msg.Command)
+			return a, tea.Batch(
+				msg.Command.Handler(msg.Command),
+				util.CmdHandler(chat.SlashCommandClosedMsg{}),
+			)
 		}
-		return a, util.ReportInfo("Command selected: " + msg.Command.Title)
+		return a, tea.Batch(
+			util.ReportInfo("Command selected: "+msg.Command.Title),
+			util.CmdHandler(chat.SlashCommandClosedMsg{}),
+		)
 
 	case dialog.ShowMultiArgumentsDialogMsg:
 		// Show multi-arguments dialog
@@ -423,6 +457,22 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case dialog.CloseMultiArgumentsDialogMsg:
 		// Close multi-arguments dialog
 		a.showMultiArgumentsDialog = false
+
+		// OpenAI-compatible provider setup (/provider command)
+		if msg.CommandID == "provider" && msg.Submit {
+			baseURL := msg.Args["BASEURL"]
+			apiKey := msg.Args["APIKEY"]
+
+			if baseURL == "" {
+				return a, util.ReportWarn("Base URL wajib diisi — provider tidak disimpan")
+			}
+
+			if err := config.SetProvider(models.ProviderOpenAI, apiKey, baseURL, nil); err != nil {
+				return a, util.ReportError(err)
+			}
+
+			return a, util.ReportInfo("Provider OpenAI-compatible disimpan — pilih model via /models")
+		}
 
 		// If submitted, replace all named arguments and run the command
 		if msg.Submit {
@@ -496,6 +546,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return a, util.ReportWarn("No commands available")
 				}
 				a.commandDialog.SetCommands(a.commands)
+				a.commandDialog.SetQuery("")
 				a.showCommandDialog = true
 				return a, nil
 			}
@@ -507,6 +558,8 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions && !a.showSessionDialog && !a.showCommandDialog {
 				a.showModelDialog = true
+				// Refresh so the model list is up to date (fetches custom provider models)
+				a.modelDialog.Refresh()
 				return a, nil
 			}
 			return a, nil
@@ -949,6 +1002,46 @@ If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (
 			return func() tea.Msg {
 				return startCompactSessionMsg{}
 			}
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "models",
+		Title:       "Switch Model",
+		Description: "Select a model / provider",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(showModelDialogMsg{})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "new",
+		Title:       "New Session",
+		Description: "Start a new session",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(chat.NewSessionMsg{})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "help",
+		Title:       "Toggle Help",
+		Description: "Show keyboard shortcuts",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(showHelpDialogMsg{})
+		},
+	})
+
+	model.RegisterCommand(dialog.Command{
+		ID:          "provider",
+		Title:       "Add Provider",
+		Description: "Add an OpenAI-compatible provider (base URL + API key)",
+		Handler: func(cmd dialog.Command) tea.Cmd {
+			return util.CmdHandler(dialog.ShowMultiArgumentsDialogMsg{
+				CommandID: "provider",
+				Content:   "",
+				ArgNames:  []string{"BASEURL", "APIKEY"},
+			})
 		},
 	})
 	// Load custom commands

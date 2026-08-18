@@ -96,3 +96,64 @@ func init() {
 	maps.Copy(SupportedModels, VertexAIGeminiModels)
 	maps.Copy(SupportedModels, CopilotModels)
 }
+
+// dynamicModels holds models discovered from custom (OpenAI-compatible)
+// providers at runtime, e.g. via the /provider command + /models dialog.
+var dynamicModels = make(map[ModelID]Model)
+
+// RegisterDynamicModel adds a model discovered from a custom provider endpoint.
+func RegisterDynamicModel(id ModelID, name string, provider ModelProvider) {
+	if id == "" {
+		return
+	}
+	dynamicModels[id] = Model{
+		ID:               id,
+		Name:             name,
+		Provider:         provider,
+		APIModel:         string(id),
+		ContextWindow:    128000,
+		DefaultMaxTokens: 4096,
+	}
+}
+
+// RegisterDynamicModels adds a list of model IDs discovered from a custom
+// provider endpoint.
+func RegisterDynamicModels(ids []string, provider ModelProvider) {
+	for _, id := range ids {
+		RegisterDynamicModel(ModelID(id), id, provider)
+	}
+}
+
+// GetModel looks up a model in the built-in or dynamically registered models.
+func GetModel(id ModelID) (Model, bool) {
+	if m, ok := SupportedModels[id]; ok {
+		return m, true
+	}
+	m, ok := dynamicModels[id]
+	return m, ok
+}
+
+// ModelName returns a display name for a model ID, falling back to the ID
+// itself when the model is unknown (e.g. a custom provider model).
+func ModelName(id ModelID) string {
+	if m, ok := GetModel(id); ok {
+		return m.Name
+	}
+	return string(id)
+}
+
+// ModelsForProvider returns all models (built-in + dynamic) for a provider.
+func ModelsForProvider(provider ModelProvider) []Model {
+	var result []Model
+	for _, m := range SupportedModels {
+		if m.Provider == provider {
+			result = append(result, m)
+		}
+	}
+	for _, m := range dynamicModels {
+		if m.Provider == provider {
+			result = append(result, m)
+		}
+	}
+	return result
+}

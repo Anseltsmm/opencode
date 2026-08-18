@@ -41,36 +41,26 @@ AZKIA is a Go-based CLI application that brings AI assistance to your terminal. 
 
 ## Installation
 
-### Using the Install Script
+### Using the Install Script (recommended)
+
+Downloads the prebuilt binary from GitHub Releases and adds it to your PATH:
 
 ```bash
 # Install the latest version
-curl -fsSL https://raw.githubusercontent.com/azkia-ai/azkia/refs/heads/main/install | bash
+curl -fsSL https://raw.githubusercontent.com/Anseltsmm/opencode/refs/heads/main/install | bash
 
 # Install a specific version
-curl -fsSL https://raw.githubusercontent.com/azkia-ai/azkia/refs/heads/main/install | VERSION=0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/Anseltsmm/opencode/refs/heads/main/install | VERSION=0.1.0 bash
 ```
 
-### Using Homebrew (macOS and Linux)
+### Build from source
+
+Requires Go 1.24+:
 
 ```bash
-brew install azkia-ai/tap/azkia
-```
-
-### Using AUR (Arch Linux)
-
-```bash
-# Using yay
-yay -S azkia-ai-bin
-
-# Using paru
-paru -S azkia-ai-bin
-```
-
-### Using Go
-
-```bash
-go install github.com/azkia-ai/azkia@latest
+git clone https://github.com/Anseltsmm/opencode.git
+cd opencode
+bash install.sh
 ```
 
 ## Configuration
@@ -664,7 +654,7 @@ You can also configure a self-hosted model in the configuration file under the `
 
 ```bash
 # Clone the repository
-git clone https://github.com/azkia-ai/azkia.git
+git clone https://github.com/Anseltsmm/opencode.git
 cd azkia
 
 # Build

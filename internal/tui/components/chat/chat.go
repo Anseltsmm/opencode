@@ -23,6 +23,13 @@ type SessionSelectedMsg = session.Session
 
 type SessionClearedMsg struct{}
 
+// NewSessionMsg is sent to clear the current session and start a new one
+type NewSessionMsg struct{}
+
+// SlashCommandClosedMsg is sent when the slash command dialog closes so the
+// editor can clear the "/" input
+type SlashCommandClosedMsg struct{}
+
 type EditorFocusMsg bool
 
 func header(width int) string {

@@ -709,7 +709,7 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 	if !ok {
 		return nil, fmt.Errorf("agent %s not found", agentName)
 	}
-	model, ok := models.SupportedModels[agentConfig.Model]
+	model, ok := models.GetModel(agentConfig.Model)
 	if !ok {
 		return nil, fmt.Errorf("model %s not supported", agentConfig.Model)
 	}
@@ -731,13 +731,17 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 		provider.WithSystemMessage(prompt.GetAgentPrompt(agentName, model.Provider)),
 		provider.WithMaxTokens(maxTokens),
 	}
+	// Build OpenAI-compatible client options (base URL + reasoning effort) in a
+	// single WithOpenAIOptions call, since it assigns rather than appends.
+	var openaiOpts []provider.OpenAIOption
+	if model.Provider == models.ProviderOpenAI && providerCfg.BaseURL != "" {
+		openaiOpts = append(openaiOpts, provider.WithOpenAIBaseURL(providerCfg.BaseURL))
+	}
 	if model.Provider == models.ProviderOpenAI || model.Provider == models.ProviderLocal && model.CanReason {
-		opts = append(
-			opts,
-			provider.WithOpenAIOptions(
-				provider.WithReasoningEffort(agentConfig.ReasoningEffort),
-			),
-		)
+		openaiOpts = append(openaiOpts, provider.WithReasoningEffort(agentConfig.ReasoningEffort))
+	}
+	if len(openaiOpts) > 0 {
+		opts = append(opts, provider.WithOpenAIOptions(openaiOpts...))
 	} else if model.Provider == models.ProviderAnthropic && model.CanReason && agentName == config.AgentCoder {
 		opts = append(
 			opts,
