@@ -507,11 +507,11 @@ func validateAgent(cfg *Config, name AgentName, agent Agent) error {
 			"agent", name,
 			"configured_model", agent.Model)
 
-		// Set default model based on available providers
+		// Set default model based on available providers. If no provider is
+		// configured at all, don't error — the app will start with a
+		// placeholder provider and prompt the user to set one up.
 		if setDefaultModelForAgent(name) {
 			logging.Info("set default model for agent", "agent", name, "model", cfg.Agents[name].Model)
-		} else {
-			return fmt.Errorf("no valid provider available for agent %s", name)
 		}
 		return nil
 	}
@@ -529,11 +529,10 @@ func validateAgent(cfg *Config, name AgentName, agent Agent) error {
 				"model", agent.Model,
 				"provider", provider)
 
-			// Set default model based on available providers
+			// Set default model based on available providers. If no provider is
+			// configured at all, don't error — setup will be prompted instead.
 			if setDefaultModelForAgent(name) {
 				logging.Info("set default model for agent", "agent", name, "model", cfg.Agents[name].Model)
-			} else {
-				return fmt.Errorf("no valid provider available for agent %s", name)
 			}
 		} else {
 			// Add provider with API key from environment
@@ -542,18 +541,17 @@ func validateAgent(cfg *Config, name AgentName, agent Agent) error {
 			}
 			logging.Info("added provider from environment", "provider", provider)
 		}
-	} else if providerCfg.Disabled || providerCfg.APIKey == "" {
-		// Provider is disabled or has no API key
+	} else if providerCfg.Disabled || (providerCfg.APIKey == "" && providerCfg.BaseURL == "") {
+		// Provider is disabled or has no API key (and no custom base URL)
 		logging.Warn("provider is disabled or has no API key, reverting to default",
 			"agent", name,
 			"model", agent.Model,
 			"provider", provider)
 
-		// Set default model based on available providers
+		// Set default model based on available providers. If no provider is
+		// configured at all, don't error — setup will be prompted instead.
 		if setDefaultModelForAgent(name) {
 			logging.Info("set default model for agent", "agent", name, "model", cfg.Agents[name].Model)
-		} else {
-			return fmt.Errorf("no valid provider available for agent %s", name)
 		}
 	}
 

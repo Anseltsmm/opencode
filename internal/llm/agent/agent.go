@@ -80,10 +80,9 @@ func NewAgent(
 	agentTools []tools.BaseTool,
 ) (Service, error) {
 	agentProvider, err := createAgentProvider(agentName)
-	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
-		return nil, err
-	}
-	if errors.Is(err, provider.ErrNoProviderConfigured) {
+	if err != nil {
+		// Without a usable provider the TUI should still start and prompt
+		// the user to configure one, so fall back to a placeholder provider
 		agentProvider = provider.NewNoopProvider()
 	}
 
@@ -92,17 +91,11 @@ func NewAgent(
 	if agentName == config.AgentCoder {
 		// Only generate titles/summaries for the coder agent
 		titleProvider, err = createAgentProvider(config.AgentTitle)
-		if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
-			return nil, err
-		}
-		if errors.Is(err, provider.ErrNoProviderConfigured) {
+		if err != nil {
 			titleProvider = provider.NewNoopProvider()
 		}
 		summarizeProvider, err = createAgentProvider(config.AgentSummarizer)
-		if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
-			return nil, err
-		}
-		if errors.Is(err, provider.ErrNoProviderConfigured) {
+		if err != nil {
 			summarizeProvider = provider.NewNoopProvider()
 		}
 	}
