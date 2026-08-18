@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"slices"
 
+	"github.com/Anseltsmm/azkia/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/pubsub"
+	"github.com/Anseltsmm/azkia/internal/tui/layout"
+	"github.com/Anseltsmm/azkia/internal/tui/styles"
+	"github.com/Anseltsmm/azkia/internal/tui/theme"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/opencode-ai/opencode/internal/logging"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/tui/layout"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 type TableComponent interface {

@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/fileutil"
-	"github.com/opencode-ai/opencode/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/fileutil"
+	"github.com/Anseltsmm/azkia/internal/logging"
 )
 
 const (

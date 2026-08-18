@@ -7,44 +7,44 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Anseltsmm/azkia/internal/app"
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/db"
+	"github.com/Anseltsmm/azkia/internal/format"
+	"github.com/Anseltsmm/azkia/internal/llm/agent"
+	"github.com/Anseltsmm/azkia/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/pubsub"
+	"github.com/Anseltsmm/azkia/internal/tui"
+	"github.com/Anseltsmm/azkia/internal/version"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/db"
-	"github.com/opencode-ai/opencode/internal/format"
-	"github.com/opencode-ai/opencode/internal/llm/agent"
-	"github.com/opencode-ai/opencode/internal/logging"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/tui"
-	"github.com/opencode-ai/opencode/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "opencode",
+	Use:   "azkia",
 	Short: "Terminal-based AI assistant for software development",
-	Long: `OpenCode is a powerful terminal-based AI assistant that helps with software development tasks.
+	Long: `AZKIA is a powerful terminal-based AI assistant that helps with software development tasks.
 It provides an interactive chat interface with AI capabilities, code analysis, and LSP integration
 to assist developers in writing, debugging, and understanding code directly from the terminal.`,
 	Example: `
   # Run in interactive mode
-  opencode
+  azkia
 
   # Run with debug logging
-  opencode -d
+  azkia -d
 
   # Run with debug logging in a specific directory
-  opencode -d -c /path/to/project
+  azkia -d -c /path/to/project
 
   # Print version
-  opencode -v
+  azkia -v
 
   # Run a single non-interactive prompt
-  opencode -p "Explain the use of context in Go"
+  azkia -p "Explain the use of context in Go"
 
   # Run a single non-interactive prompt with JSON output format
-  opencode -p "Explain the use of context in Go" -f json
+  azkia -p "Explain the use of context in Go" -f json
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If the help flag is set, show the help message

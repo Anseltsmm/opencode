@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/Anseltsmm/azkia/internal/db"
+	"github.com/Anseltsmm/azkia/internal/pubsub"
 	"github.com/google/uuid"
-	"github.com/opencode-ai/opencode/internal/db"
-	"github.com/opencode-ai/opencode/internal/pubsub"
 )
 
 type Session struct {

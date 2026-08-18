@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/llm/tools"
-	"github.com/opencode-ai/opencode/internal/message"
+	"github.com/Anseltsmm/azkia/internal/llm/models"
+	"github.com/Anseltsmm/azkia/internal/llm/tools"
+	"github.com/Anseltsmm/azkia/internal/message"
 )
 
 type EventType string
@@ -136,8 +136,8 @@ func NewProvider(providerName models.ModelProvider, opts ...ProviderClientOption
 		clientOptions.openaiOptions = append(clientOptions.openaiOptions,
 			WithOpenAIBaseURL("https://openrouter.ai/api/v1"),
 			WithOpenAIExtraHeaders(map[string]string{
-				"HTTP-Referer": "opencode.ai",
-				"X-Title":      "OpenCode",
+				"HTTP-Referer": "azkia.ai",
+				"X-Title":      "AZKIA",
 			}),
 		)
 		return &baseProvider[OpenAIClient]{

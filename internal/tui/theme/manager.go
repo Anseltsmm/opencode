@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/logging"
 	"github.com/alecthomas/chroma/v2/styles"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/logging"
 )
 
 // Manager handles theme registration, selection, and retrieval.
@@ -92,9 +92,9 @@ func AvailableThemes() []string {
 		names = append(names, name)
 	}
 	slices.SortFunc(names, func(a, b string) int {
-		if a == "opencode" {
+		if a == "azkia" {
 			return -1
-		} else if b == "opencode" {
+		} else if b == "azkia" {
 			return 1
 		}
 		return strings.Compare(a, b)

@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/Anseltsmm/azkia/internal/fileutil"
+	"github.com/Anseltsmm/azkia/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/tui/components/dialog"
 	"github.com/lithammer/fuzzysearch/fuzzy"
-	"github.com/opencode-ai/opencode/internal/fileutil"
-	"github.com/opencode-ai/opencode/internal/logging"
-	"github.com/opencode-ai/opencode/internal/tui/components/dialog"
 )
 
 type filesAndFoldersContextGroup struct {

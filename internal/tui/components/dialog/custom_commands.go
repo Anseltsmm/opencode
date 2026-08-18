@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 // Command prefix constants
@@ -30,7 +30,7 @@ func LoadCustomCommands() ([]Command, error) {
 
 	var commands []Command
 
-	// Load user commands from XDG_CONFIG_HOME/opencode/commands
+	// Load user commands from XDG_CONFIG_HOME/azkia/commands
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
 		// Default to ~/.config if XDG_CONFIG_HOME is not set
@@ -41,7 +41,7 @@ func LoadCustomCommands() ([]Command, error) {
 	}
 
 	if xdgConfigHome != "" {
-		userCommandsDir := filepath.Join(xdgConfigHome, "opencode", "commands")
+		userCommandsDir := filepath.Join(xdgConfigHome, "azkia", "commands")
 		userCommands, err := loadCommandsFromDir(userCommandsDir, UserCommandPrefix)
 		if err != nil {
 			// Log error but continue - we'll still try to load other commands
@@ -51,10 +51,10 @@ func LoadCustomCommands() ([]Command, error) {
 		}
 	}
 
-	// Load commands from $HOME/.opencode/commands
+	// Load commands from $HOME/.azkia/commands
 	home, err := os.UserHomeDir()
 	if err == nil {
-		homeCommandsDir := filepath.Join(home, ".opencode", "commands")
+		homeCommandsDir := filepath.Join(home, ".azkia", "commands")
 		homeCommands, err := loadCommandsFromDir(homeCommandsDir, UserCommandPrefix)
 		if err != nil {
 			// Log error but continue - we'll still try to load other commands

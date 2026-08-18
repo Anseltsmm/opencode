@@ -41,7 +41,7 @@ Thumbs.db
 .env
 .env.local
 
-.opencode/
+.azkia/
 
-opencode
-opencode.md
+azkia
+azkia.md

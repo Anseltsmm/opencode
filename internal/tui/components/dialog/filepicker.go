@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anseltsmm/azkia/internal/app"
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/message"
+	"github.com/Anseltsmm/azkia/internal/tui/image"
+	"github.com/Anseltsmm/azkia/internal/tui/styles"
+	"github.com/Anseltsmm/azkia/internal/tui/theme"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/logging"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/tui/image"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 const (

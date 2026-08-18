@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/llm/tools"
+	"github.com/Anseltsmm/azkia/internal/logging"
+	"github.com/Anseltsmm/azkia/internal/message"
 	"github.com/google/uuid"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/llm/tools"
-	"github.com/opencode-ai/opencode/internal/logging"
-	"github.com/opencode-ai/opencode/internal/message"
 	"google.golang.org/genai"
 )
 

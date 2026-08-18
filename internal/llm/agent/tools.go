@@ -3,12 +3,12 @@ package agent
 import (
 	"context"
 
-	"github.com/opencode-ai/opencode/internal/history"
-	"github.com/opencode-ai/opencode/internal/llm/tools"
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/permission"
-	"github.com/opencode-ai/opencode/internal/session"
+	"github.com/Anseltsmm/azkia/internal/history"
+	"github.com/Anseltsmm/azkia/internal/llm/tools"
+	"github.com/Anseltsmm/azkia/internal/lsp"
+	"github.com/Anseltsmm/azkia/internal/message"
+	"github.com/Anseltsmm/azkia/internal/permission"
+	"github.com/Anseltsmm/azkia/internal/session"
 )
 
 func CoderAgentTools(

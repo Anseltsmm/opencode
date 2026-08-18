@@ -1,14 +1,14 @@
 package dialog
 
 import (
+	utilComponents "github.com/Anseltsmm/azkia/internal/tui/components/util"
+	"github.com/Anseltsmm/azkia/internal/tui/layout"
+	"github.com/Anseltsmm/azkia/internal/tui/styles"
+	"github.com/Anseltsmm/azkia/internal/tui/theme"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	utilComponents "github.com/opencode-ai/opencode/internal/tui/components/util"
-	"github.com/opencode-ai/opencode/internal/tui/layout"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 // Command represents a command that can be executed

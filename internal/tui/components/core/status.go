@@ -5,18 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/llm/models"
+	"github.com/Anseltsmm/azkia/internal/lsp"
+	"github.com/Anseltsmm/azkia/internal/lsp/protocol"
+	"github.com/Anseltsmm/azkia/internal/pubsub"
+	"github.com/Anseltsmm/azkia/internal/session"
+	"github.com/Anseltsmm/azkia/internal/tui/components/chat"
+	"github.com/Anseltsmm/azkia/internal/tui/styles"
+	"github.com/Anseltsmm/azkia/internal/tui/theme"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/lsp/protocol"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/components/chat"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 type StatusCmp interface {

@@ -108,7 +108,7 @@
       "type": "object"
     }
   },
-  "description": "Configuration schema for the OpenCode application",
+  "description": "Configuration schema for the AZKIA application",
   "properties": {
     "agents": {
       "additionalProperties": {
@@ -238,12 +238,12 @@
         ".cursor/rules/",
         "CLAUDE.md",
         "CLAUDE.local.md",
-        "opencode.md",
-        "opencode.local.md",
-        "OpenCode.md",
-        "OpenCode.local.md",
-        "OPENCODE.md",
-        "OPENCODE.local.md"
+        "azkia.md",
+        "azkia.local.md",
+        "AZKIA.md",
+        "AZKIA.local.md",
+        "AZKIA.md",
+        "AZKIA.local.md"
       ],
       "description": "Context paths for the application",
       "items": {
@@ -255,7 +255,7 @@
       "description": "Storage configuration",
       "properties": {
         "directory": {
-          "default": ".opencode",
+          "default": ".azkia",
           "description": "Directory where application data is stored",
           "type": "string"
         }
@@ -397,10 +397,10 @@
       "description": "Terminal User Interface configuration",
       "properties": {
         "theme": {
-          "default": "opencode",
+          "default": "azkia",
           "description": "TUI theme name",
           "enum": [
-            "opencode",
+            "azkia",
             "catppuccin",
             "dracula",
             "flexoki",
@@ -420,6 +420,6 @@
       "type": "string"
     }
   },
-  "title": "OpenCode Configuration",
+  "title": "AZKIA Configuration",
   "type": "object"
 }

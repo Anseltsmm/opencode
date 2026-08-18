@@ -5,15 +5,15 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Anseltsmm/azkia/internal/config"
+	"github.com/Anseltsmm/azkia/internal/llm/models"
+	"github.com/Anseltsmm/azkia/internal/tui/layout"
+	"github.com/Anseltsmm/azkia/internal/tui/styles"
+	"github.com/Anseltsmm/azkia/internal/tui/theme"
+	"github.com/Anseltsmm/azkia/internal/tui/util"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/tui/layout"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
 )
 
 const (
