@@ -7,6 +7,7 @@ import (
 	"github.com/Anseltsmm/azkia/internal/app"
 	"github.com/Anseltsmm/azkia/internal/completions"
 	"github.com/Anseltsmm/azkia/internal/message"
+	"github.com/Anseltsmm/azkia/internal/pubsub"
 	"github.com/Anseltsmm/azkia/internal/session"
 	"github.com/Anseltsmm/azkia/internal/tui/components/chat"
 	"github.com/Anseltsmm/azkia/internal/tui/components/dialog"
@@ -108,6 +109,12 @@ func (p *chatPage) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case chat.SessionSelectedMsg:
 		p.session = msg
+	case pubsub.Event[session.Session]:
+		// Keep the page's session in sync (e.g. when the title is updated) so
+		// components created later (like the sidebar) show fresh data.
+		if msg.Type == pubsub.UpdatedEvent && msg.Payload.ID == p.session.ID {
+			p.session = msg.Payload
+		}
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keyMap.ShowCompletionDialog):

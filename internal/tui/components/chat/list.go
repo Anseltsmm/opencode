@@ -152,8 +152,12 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if needsRerender {
+			// Only auto-scroll if the user is already reading at the bottom.
+			// Without this, the view gets yanked to the bottom on every
+			// streaming chunk while the user is scrolling up to read.
+			atBottom := m.viewport.AtBottom()
 			m.renderView()
-			if len(m.messages) > 0 {
+			if len(m.messages) > 0 && atBottom {
 				if (msg.Type == pubsub.CreatedEvent) ||
 					(msg.Type == pubsub.UpdatedEvent && msg.Payload.ID == m.messages[len(m.messages)-1].ID) {
 					m.viewport.GotoBottom()

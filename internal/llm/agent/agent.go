@@ -66,7 +66,6 @@ type agent struct {
 	tools    []tools.BaseTool
 	provider provider.Provider
 
-	titleProvider     provider.Provider
 	summarizeProvider provider.Provider
 
 	providerConfigured bool
@@ -86,14 +85,9 @@ func NewAgent(
 		agentProvider = provider.NewNoopProvider()
 	}
 
-	var titleProvider provider.Provider
 	var summarizeProvider provider.Provider
 	if agentName == config.AgentCoder {
-		// Only generate titles/summaries for the coder agent
-		titleProvider, err = createAgentProvider(config.AgentTitle)
-		if err != nil {
-			titleProvider = provider.NewNoopProvider()
-		}
+		// Only generate summaries for the coder agent
 		summarizeProvider, err = createAgentProvider(config.AgentSummarizer)
 		if err != nil {
 			summarizeProvider = provider.NewNoopProvider()
@@ -101,15 +95,14 @@ func NewAgent(
 	}
 
 	agent := &agent{
-		Broker:            pubsub.NewBroker[AgentEvent](),
-		provider:          agentProvider,
-		messages:          messages,
-		sessions:          sessions,
-		tools:             agentTools,
-		titleProvider:     titleProvider,
-		summarizeProvider: summarizeProvider,
+		Broker:             pubsub.NewBroker[AgentEvent](),
+		provider:           agentProvider,
+		messages:           messages,
+		sessions:           sessions,
+		tools:              agentTools,
+		summarizeProvider:  summarizeProvider,
 		providerConfigured: err == nil,
-		activeRequests:    sync.Map{},
+		activeRequests:     sync.Map{},
 	}
 
 	return agent, nil
@@ -156,34 +149,30 @@ func (a *agent) IsSessionBusy(sessionID string) bool {
 	return busy
 }
 
+// generateTitle derives a session title from the first user message. It does
+// NOT call the model: a separate title request would race with the main chat
+// request and can delay it on serial-processing endpoints (e.g. local Ollama),
+// which shows up as "the AI never responds" on the first message.
 func (a *agent) generateTitle(ctx context.Context, sessionID string, content string) error {
 	if content == "" {
-		return nil
-	}
-	if a.titleProvider == nil {
 		return nil
 	}
 	session, err := a.sessions.Get(ctx, sessionID)
 	if err != nil {
 		return err
 	}
-	ctx = context.WithValue(ctx, tools.SessionIDContextKey, sessionID)
-	parts := []message.ContentPart{message.TextContent{Text: content}}
-	response, err := a.titleProvider.SendMessages(
-		ctx,
-		[]message.Message{
-			{
-				Role:  message.User,
-				Parts: parts,
-			},
-		},
-		make([]tools.BaseTool, 0),
-	)
-	if err != nil {
-		return err
-	}
 
-	title := strings.TrimSpace(strings.ReplaceAll(response.Content, "\n", " "))
+	// Use the first line of the message (up to ~60 runes) as the title,
+	// the same approach as other agentic coding tools.
+	title := strings.TrimSpace(content)
+	if idx := strings.IndexAny(title, "\n\r"); idx != -1 {
+		title = title[:idx]
+	}
+	title = strings.TrimSpace(title)
+	runes := []rune(title)
+	if len(runes) > 60 {
+		title = string(runes[:60]) + "…"
+	}
 	if title == "" {
 		return nil
 	}
@@ -532,13 +521,6 @@ func (a *agent) ReloadProvider() error {
 	if err != nil {
 		return fmt.Errorf("failed to create coder provider: %w", err)
 	}
-	titleProvider, err := createAgentProvider(config.AgentTitle)
-	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
-		return fmt.Errorf("failed to create title provider: %w", err)
-	}
-	if errors.Is(err, provider.ErrNoProviderConfigured) {
-		titleProvider = provider.NewNoopProvider()
-	}
 	summarizeProvider, err := createAgentProvider(config.AgentSummarizer)
 	if err != nil && !errors.Is(err, provider.ErrNoProviderConfigured) {
 		return fmt.Errorf("failed to create summarize provider: %w", err)
@@ -548,7 +530,6 @@ func (a *agent) ReloadProvider() error {
 	}
 
 	a.provider = coderProvider
-	a.titleProvider = titleProvider
 	a.summarizeProvider = summarizeProvider
 	a.providerConfigured = true
 	return nil
